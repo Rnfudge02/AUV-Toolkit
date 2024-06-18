@@ -1,0 +1,76 @@
+#Build Issac ROS Image for aarch64
+##https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+#Maintainer label
+LABEL maintainer "Robert Fudge <rnfudge@mun.ca>"
+
+#Set user and home environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USER=auv-container
+ENV HOME=/home/${USER}
+ENV ISSAC_ROS_WS=${HOME}/ros_ws
+
+#Install prerequisite packages
+RUN apt-get update && apt-get install -y keyboard-configuration && \
+apt-get install -y ros-${ROS_DISTRO}-isaac-ros-visual-slam && \
+apt-get install -y wget curl git zstd python3-pip python3-dev ros-${ROS_DISTRO}-foxglove-bridge \
+ros-${ROS_DISTRO}-ament-cmake ros-${ROS_DISTRO}-pcl-ros ros-${ROS_DISTRO}-tf2-eigen ros-${ROS_DISTRO}-rviz2 \
+ros-${ROS_DISTRO}-usb-cam build-essential libeigen3-dev libjsoncpp-dev libspdlog-dev libcurl4-openssl-dev \
+cmake python3-colcon-common-extensions libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl \
+gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio && rm -rf /var/lib/apt/lists/*
+
+#Set user for container
+USER ${USER}
+
+#Upgrade pip and install python libraries
+RUN python3 -m pip install --upgrade pip && pip3 install onnx pyserial transforms3d
+
+#Add to dialout and video group so that container can access devices
+RUN sudo usermod -aG dialout ${USER} && sudo usermod -aG video ${USER} && \
+mkdir -p ${HOME}/ros_ws
+
+#set ROS workspace as WORKDIR
+WORKDIR ${HOME}/ros_ws
+
+#Needed to find libcuda.so.1, need to find a way to get ZED SDK working
+RUN echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.2/compat/:$LD_LIBRARY_PATH" > ${HOME}/.bashrc && source ${HOME}/.bashrc
+
+#Install the ZED SDK - Args gathered from Nvidia ISSAC_ROS_COMMON repository
+#Symlink required to use the streaming features on Jetson inside a container, based on
+#https://github.com/stereolabs/zed-docker/blob/fd514606174d8bb09f21a229f1099205b284ecb6/4.X/l4t/devel/Dockerfile#L27C5-L27C95
+RUN wget -q --no-check-certificate -O ZED_SDK_Linux.run https://download.stereolabs.com/zedsdk/4.1/l4t36.3/jetsons && \
+chmod +x ZED_SDK_Linux.run && ./ZED_SDK_Linux.run -- silent -- skip_od_module -- skip_python -- skip_drivers && \
+sudo ln -sf /usr/lib/aarch64-linux-gnu/tegra/libv4l2.so.0 /usr/lib/aarch64-linux-gnu/libv4l2.so
+
+WORKDIR ${HOME}/ros_ws
+
+#https://github.com/stereolabs/zed-ros2-wrapper
+#https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
+#https://github.com/mavlink/mavros
+#https://github.com/Robotic-Decision-Making-Lab/ardusub_driver
+RUN mkdir src build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
+git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git && \
+git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git && \
+git clone -b ros2 https://github.com/mavlink/mavros && \
+mv ./zed-ros2-wrapper ./src/zed-ros2-wrapper && \
+mv ./nmea_navsat_driver ./src/nmea_navsat_driver && \
+mv ./ardusub_driver ./src/ardusub_driver && \
+mv ./mavros ./src/mavros && \
+sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
+
+#Remove mavros tests, cause build failure at this point
+
+
+#Install prerequisites using rosdep
+RUN sudo apt-get update && rosdep update && \
+rosdep install --from-paths src --ignore-src -r -y
+RUN source /opt/ros/${ROS_DISTRO}/setup.bash
+
+COPY scripts/auv-entrypoint.sh /entrypoint.sh
+RUN sudo chmod +x /entrypoint.sh
+
+ENTRYPOINT [ "/entrypoint.sh" ]
