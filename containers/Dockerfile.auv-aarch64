@@ -31,7 +31,7 @@ RUN python3 -m pip install --upgrade pip && pip3 install onnx pyserial transform
 
 #Add to dialout and video group so that container can access devices
 RUN sudo usermod -aG dialout ${USER} && sudo usermod -aG video ${USER} && \
-mkdir -p ${HOME}/ros_ws
+mkdir -p ${HOME}/ros_ws && touch ${HOME}/.bashrc
 
 #set ROS workspace as WORKDIR
 WORKDIR ${HOME}/ros_ws
@@ -43,10 +43,8 @@ RUN echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.2/compat/:$LD_LIBRARY_PATH" 
 #Symlink required to use the streaming features on Jetson inside a container, based on
 #https://github.com/stereolabs/zed-docker/blob/fd514606174d8bb09f21a229f1099205b284ecb6/4.X/l4t/devel/Dockerfile#L27C5-L27C95
 RUN wget -q --no-check-certificate -O ZED_SDK_Linux.run https://download.stereolabs.com/zedsdk/4.1/l4t36.3/jetsons && \
-chmod +x ZED_SDK_Linux.run && ./ZED_SDK_Linux.run -- silent -- skip_od_module -- skip_python -- skip_drivers && \
+chmod +x ZED_SDK_Linux.run && ./ZED_SDK_Linux.run -- silent && \
 sudo ln -sf /usr/lib/aarch64-linux-gnu/tegra/libv4l2.so.0 /usr/lib/aarch64-linux-gnu/libv4l2.so
-
-WORKDIR ${HOME}/ros_ws
 
 #https://github.com/stereolabs/zed-ros2-wrapper
 #https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
@@ -68,7 +66,6 @@ sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
 #Install prerequisites using rosdep
 RUN sudo apt-get update && rosdep update && \
 rosdep install --from-paths src --ignore-src -r -y
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash
 
 COPY scripts/auv-entrypoint.sh /entrypoint.sh
 RUN sudo chmod +x /entrypoint.sh

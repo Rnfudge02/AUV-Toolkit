@@ -59,7 +59,6 @@ sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
 #Install prerequisites using rosdep
 RUN sudo apt-get update && rosdep update && \
 rosdep install --from-paths src --ignore-src -r -y
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash
 
 COPY scripts/auv-entrypoint.sh /entrypoint.sh
 RUN sudo chmod +x /entrypoint.sh

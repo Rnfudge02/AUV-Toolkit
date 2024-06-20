@@ -79,6 +79,7 @@ while getopts "hi:b:s:dnl:" options; do
 
                 echo -e "${FG_CYAN}Removing old versions of Nvidia CUDA Toolkit${RESET}" | tee -a ${INIT_LOG}
                 sudo apt-get remove --purge -y '^nvidia-.*' | tee -a ${INIT_LOG}
+                sudo apt-get autoremove -y | tee -a ${INIT_LOG}
                 sudo apt-get install ubuntu-desktop | tee -a ${INIT_LOG}
 
                 #Install the Nvidia CUDA Toolkit and Drivers
@@ -176,7 +177,6 @@ while getopts "hi:b:s:dnl:" options; do
                 sudo snap install foxglove-studio  | tee -a ${BUILD_LOG}
                 echo -e "${FG_CYAN}Foxglove Studio Installed${RESET}" | tee -a ${INIT_LOG}
 
-
             #Instructions specific to aarch64
             elif [ "${OPTARG}" == "aarch64" ]; then
                 echo -e "${FG_CYAN}Target Selected: aarch64${RESET}" | tee -a ${INIT_LOG}
@@ -227,6 +227,9 @@ while getopts "hi:b:s:dnl:" options; do
                 git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git
                 git clone -b ros2 https://github.com/mavlink/mavros
 
+                mkdir -p ./configuration_files/zed/
+                mkdir -p ./configuration_files/ardusub/
+
                 cp ./zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/zed-common.yaml
                 cp ./zed-ros2-wrapper/zed_wrapper/config/zed2i.yaml ./configuration_files/zed/zed-zed2i.yaml
                 cp ./ardusub_driver/ardusub_teleop/config/joy_teleop.yaml ./configuration_files/ardusub/joy_teleop.yaml
@@ -249,6 +252,9 @@ while getopts "hi:b:s:dnl:" options; do
             git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
             git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git
             git clone -b ros2 https://github.com/mavlink/mavros
+
+            mkdir -p ./configuration_files/zed/
+            mkdir -p ./configuration_files/ardusub/
 
             cp zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/common.yaml
             cp zed-ros2-wrapper/zed_wrapper/config/zed2i.yaml ./configuration_files/zed/zed2i.yaml
