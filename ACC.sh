@@ -44,7 +44,7 @@ echo -e "${BOLD}${FG_BLUE}AUV Container Controller (Desktop) REV 3.1, Program de
 mkdir -p .status/logs
 
 #Parse command line arguments
-while getopts "hi:b:s:dnl:" options; do
+while getopts "hi:b:s:dnl:p:" options; do
     case ${options} in
         #Handle help case - Working (TESTED)
         h)
@@ -57,6 +57,7 @@ while getopts "hi:b:s:dnl:" options; do
             echo -e "   -d - Displays the status of the project and associated containers"
             echo -e "   -n - Starts a new terminal instance in the running container"
             echo -e "   -l - Views specified log, pass in either i, b, or s to specify log"
+            echo -e "   -p - Patches broken drivers, specify driver folder name"
             echo -e ""
             echo -e "Please do not modify the .status folder, as the files contained within are used to keep track of which sub-scripts have been run"
 
@@ -72,6 +73,9 @@ while getopts "hi:b:s:dnl:" options; do
 
             #Ensure certificates, curl and wget are installed
             sudo apt-get install ca-certificates curl wget | tee -a ${INIT_LOG}
+
+            #Edit network configuration so communication with companion computer is possible
+            iceANDrocksXORSUB0426
 
             #Instructions specific to x86_64
             if [ "${OPTARG}" == "x86_64" ]; then
@@ -471,6 +475,24 @@ while getopts "hi:b:s:dnl:" options; do
                 echo -e "${FG_RED}Error (FATAL): Could not determine which log ${OPTARG} corresponds to${RESET}"
             fi
 
+            ;;
+
+        #Patching (initially implemented to fix broken MoveIt container install in ros_humble.dockerfile of issac_ros_common)
+        #https://github.com/delenius/isaac_ros_common/commit/77b321f6c01c090e7455e908709124d6beaa2909
+        p)
+            if [ "${OPTARG}" == "isaac_ros_common" ]; then
+                cd ./dependencies/isaac_ros_common/docker
+
+                sed -i "238 i #Install py_bindings_tools from source. Fix discovered by @delenius" Dockerfile.ros2_humble
+                sed -i "239 i RUN --mount=type=cache,target=/var/cache/apt mkdir -p \${ROS_ROOT}/src && cd \${ROS_ROOT}/src && git clone https://github.com/moveit/py_binding_tools.git -b ros2 && cd py_binding_tools && source \${ROS_ROOT}/setup.bash && bloom-generate rosdebian && fakeroot debian/rules binary && cd ../ && apt-get install -y ./*.deb && rm ./*.deb" Dockerfile.ros2_humble
+
+                echo -e  "${FG_GREEN}Patch for ${OPTARG} V3.0.1 applied successfully!${RESET}"
+
+            else
+                echo -e "${FG_RED}Error (FATAL): No patches available for ${OPTARG}${RESET}"
+
+            fi
+            
             ;;
     esac
 done
