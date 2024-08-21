@@ -1,3 +1,5 @@
+#AUV Toolkit AARCH64 Dockerfile - Program developed by Robert Fudge, 2024
+
 #Build Issac ROS Image for aarch64
 ##https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
 ARG BASE_IMAGE
@@ -49,25 +51,22 @@ sudo ln -sf /usr/lib/aarch64-linux-gnu/tegra/libv4l2.so.0 /usr/lib/aarch64-linux
 #https://github.com/stereolabs/zed-ros2-wrapper
 #https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
 #https://github.com/mavlink/mavros
-#https://github.com/Robotic-Decision-Making-Lab/ardusub_driver
-RUN mkdir src build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
+RUN mkdir src src/AUV-Toolkit-ROS2 build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
 git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git && \
-git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git && \
 git clone -b ros2 https://github.com/mavlink/mavros && \
 mv ./zed-ros2-wrapper ./src/zed-ros2-wrapper && \
 mv ./nmea_navsat_driver ./src/nmea_navsat_driver && \
-mv ./ardusub_driver ./src/ardusub_driver && \
 mv ./mavros ./src/mavros && \
-sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
+sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh && \
+sed -i "261,272d" ./src/mavros/mavros/CMakeLists.txt
 
-#Remove mavros tests, cause build failure at this point
-
-
-#Install prerequisites using rosdep
+#Install prerequisites using rosdep and install vscode-server
 RUN sudo apt-get update && rosdep update && \
 rosdep install --from-paths src --ignore-src -r -y
 
+#Copy entrypoint and vscode config
 COPY scripts/auv-entrypoint.sh /entrypoint.sh
+COPY scripts/c_cpp_properties.json ../.vscode/c_cpp_properties.json
 RUN sudo chmod +x /entrypoint.sh
 
 ENTRYPOINT [ "/entrypoint.sh" ]

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Echo over configuration files at appropriate lines to configure sensors
+#AUV Toolkit Container Entrypoint - Program developed by Robert Fudge
 GNSS_DIR="$@"
 
 set -e

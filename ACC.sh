@@ -1,6 +1,7 @@
 #!/bin/bash
 
-#AUV (Autonomus Underwater Vehicle) Container Controller V3.1.0 - Developed by Robert Fudge
+#AUV (Autonomus Underwater Vehicle) Container Controller Script - Program developed by Robert Fudge
+
 #DO NOT run this script as root, user environment variables are used, it will prompt for
 #authentication when needed
 
@@ -75,7 +76,6 @@ while getopts "hi:b:s:dnl:p:" options; do
             sudo apt-get install ca-certificates curl wget | tee -a ${INIT_LOG}
 
             #Edit network configuration so communication with companion computer is possible
-            iceANDrocksXORSUB0426
 
             #Instructions specific to x86_64
             if [ "${OPTARG}" == "x86_64" ]; then
@@ -228,15 +228,12 @@ while getopts "hi:b:s:dnl:p:" options; do
                 git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git | tee -a ${INIT_LOG}
                 git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git
                 git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
-                git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git
                 git clone -b ros2 https://github.com/mavlink/mavros
 
                 mkdir -p ./configuration_files/zed/
-                mkdir -p ./configuration_files/ardusub/
 
-                cp ./zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/zed-common.yaml
-                cp ./zed-ros2-wrapper/zed_wrapper/config/zed2i.yaml ./configuration_files/zed/zed-zed2i.yaml
-                cp ./ardusub_driver/ardusub_teleop/config/joy_teleop.yaml ./configuration_files/ardusub/joy_teleop.yaml
+                cp ./zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/common.yaml
+                cp ./zed-ros2-wrapper/zed_wrapper/config/zed2i.yaml ./configuration_files/zed/zed2i.yaml
 
                 exit 0
 
@@ -254,7 +251,6 @@ while getopts "hi:b:s:dnl:p:" options; do
             git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git | tee -a ${INIT_LOG}
             git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git
             git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
-            git clone https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git
             git clone -b ros2 https://github.com/mavlink/mavros
 
             mkdir -p ./configuration_files/zed/
@@ -262,7 +258,6 @@ while getopts "hi:b:s:dnl:p:" options; do
 
             cp zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/common.yaml
             cp zed-ros2-wrapper/zed_wrapper/config/zed2i.yaml ./configuration_files/zed/zed2i.yaml
-            cp ardusub_driver/ardusub_teleop/config/joy_teleop.yaml ./configuration_files/ardusub/joy_teleop.yaml
 
             cd ..
 
@@ -327,6 +322,7 @@ while getopts "hi:b:s:dnl:p:" options; do
             cd scripts
             rm -f auv-entrypoint.sh
             ln ../../../../configuration/auv-entrypoint.sh auv-entrypoint.sh
+            ln ../../../../.vscode/c_cpp_properties.json c_cpp_properties.json
             cd ../../../../
 
             #Ensure user has access to the script
@@ -373,12 +369,18 @@ while getopts "hi:b:s:dnl:p:" options; do
                 echo -e "${FG_MAGENTA}Error (WARNING): ZED2i not detected, system is blind to environment${RESET}" | tee -a ${START_LOG}
             fi
 
+            if ping -c 1 192.168.2.2 1> /dev/null; then
+                echo -e "${FG_CYAN}Flight Companion Computer connected at 192.168.2.2" | tee -a ${START_LOG}
+            else
+                echo -e "${FG_MAGENTA}Error (WARNING): Flight Controller Computer not detected, ensure FCU is connected via USB (Unsupported)${RESET}" | tee -a ${START_LOG}
+            fi
+
             #Create shared volumes for source code and data
             mkdir -p share
             mkdir -p share/source_vol
             mkdir -p share/data_vol
 
-            docker volume create --driver local --opt type="none" --opt device="${PWD}/share/source_vol" --opt o="bind" "auv_source_vol" > /dev/null
+            docker volume create --driver local --opt type="none" --opt device="${PWD}/share/source_vol/AUV-Toolkit-ROS2" --opt o="bind" "auv_source_vol" > /dev/null
             docker volume create --driver local --opt type="none" --opt device="${PWD}/share/data_vol" --opt o="bind" "auv_data_vol" > /dev/null
 
             #Need to disable authentication for access to windowing system
@@ -387,11 +389,11 @@ while getopts "hi:b:s:dnl:p:" options; do
             #Run the build script for the specified architecture
             if [ "${OPTARG}" == "x86_64" ];then
                 echo -e "${FG_CYAN}Target Selected: x86_64${RESET}" | tee -a ${START_LOG}
-                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw"  --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src/auv-kernel:rw" --volume="auv_data_vol:/home/ros-container/ros_ws/data:rw" "auv-container:x86_64" ${GNSS_DIR}
+                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw"  --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src/AUV-Toolkit-ROS2:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:x86_64" ${GNSS_DIR}
 
             elif [ "${OPTARG}" == "aarch64" ]; then
                 echo -e "${FG_CYAN}Target Selected: aarch64${RESET}" | tee -a ${START_LOG}
-                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw" --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/ros-container/ros_ws/src/auv-kernel:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:aarch64" ${GNSS_DIR}
+                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw" --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src/AUV-Toolkit-ROS2:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:aarch64" ${GNSS_DIR}
 
             else
                 echo -e "${FG_RED}Error (FATAL): Invalid target selected${RESET}" | tee -a ${START_LOG}

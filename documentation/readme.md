@@ -1,3 +1,26 @@
+# AUV Toolkit - Project Developed by Robert Fudge, 2024
+
+# Dependencies
+Dependencies can be installed via ./ACC.sh -i. For system configuration (not tested anymore but should mostly work), specify architecture. If self-configuring hardware, use no-arch to get github dependencies
+
+Nvidia CUDA Toolkit v12.5 or v12.2
+
+Docker version 27.1.1
+
+NVIDIA Container Runtime Hook version 1.14.2
+
+ZED SDK V1.14
+
+ROS2 Humble Hawksbill
+
+ZED ROS2 Wrapper
+
+NMEA Navsat ROS2 Driver
+
+LibMavConn
+
+MAVROS ROS2 Driver
+
 # To Start
 
 ## 1. Run ./ACC.sh -i [arch]
@@ -13,10 +36,10 @@ This starts the container and will generate a terminal instance for the user to 
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
-## 5. Build Modules - MAVROS package is broken
+## 5. Build Modules - MAVROS package is fixed, removed tests because they wouldn't compile
 colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' \
   ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined"' ' --no-warn-unused-cli' \
-  --packages-select nmea_navsat_driver zed_ros2 zed_interfaces zed_components zed_wrapper libmavconn mavros_msgs && source install/setup.bash
+  --packages-select nmea_navsat_driver zed_ros2 zed_interfaces zed_components zed_wrapper libmavconn mavros_msgs mavros && source install/setup.bash
 
 ## 5. Launch ROS2 Services
 ### Foxglove ROS2 Bridge - https://docs.foxglove.dev/docs/connecting-to-data/ros-foxglove-bridge/
@@ -33,6 +56,14 @@ ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam.launch.py num_cameras:=2
 
 # Changelog
 The following versions have been deemed stable enough to consider signifigant milestones, and starting June 17th, 2024
+
+## V6.0 - August 18th, 2024
+Started looking into controlling boards power capabilities
+/sys/devices/platform/17000000.gpu/devfreq/17000000.gpu - For GPU control
+/sys/devices/system/cpu/cpu0/cpufreq - For CPU control
+
+## V5.0 - July XXth, 2024
+Created and deployed temporary fixes
 
 ## V4.0 - June 17th, 2024
 Initial commit to github
@@ -61,23 +92,17 @@ Added .status folder to track container controller status
 Initial stable build, utilizing ROS2 Humble, ZED ROS2 Wrapper, and NMEA Navsat Driver
 
 
-
-
 # TODO
-Meet with Client again, temper expectations - Reached out but he hasn't responded
-
 Design ROS2 system to act as system moderator, make decisions, provide high level control of systems in a unified interface - Created shared volume for mounting
 
-Fix broken MAVROS package, discovered error in packages, use sed to modify CMakeLists.txt and remove the tests from the build
-
-Get ARDUSUB Driver working and configured
-
-Get approval on purchase request, pick up items from Carl Thibault, P. Eng
-
-Integrate T200 Thrusters, ESC, and PiwHawk 1
+NOT NEEDED Get ARDUSUB Driver working and configured
 
 Get gaskets for end cap
 
 Source waterproof, pressure resistant silcone
 
 # DONE
+Integrate T200 Thrusters, ESC, and PiwHawk 1
+Get approval on purchase request, pick up items from Carl Thibault, P. Eng
+Fix broken MAVROS package, discovered error in packages, use sed to modify CMakeLists.txt and remove the tests from the build
+Meet with Client again, temper expectations - Reached out but he hasn't responded
