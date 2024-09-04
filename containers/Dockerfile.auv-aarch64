@@ -1,18 +1,20 @@
-#AUV Toolkit AARCH64 Dockerfile - Program developed by Robert Fudge, 2024
+#AUV Toolkit AARCH64 Dockerfile - Developed by Robert Fudge, 2024
 
 #Build Issac ROS Image for aarch64
-##https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
+#https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 #Maintainer label
 LABEL maintainer "Robert Fudge <rnfudge@mun.ca>"
+ARG ACCESS_TOKEN
 
 #Set user and home environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV USER=auv-container
 ENV HOME=/home/${USER}
 ENV ISSAC_ROS_WS=${HOME}/ros_ws
+ENV JSUB_DIR=https://${ACCESS_TOKEN}@github.com/Rnfudge02/J-Sub
 
 #Install prerequisite packages
 RUN apt-get update && apt-get install -y keyboard-configuration && \
@@ -38,7 +40,7 @@ mkdir -p ${HOME}/ros_ws && touch ${HOME}/.bashrc
 #set ROS workspace as WORKDIR
 WORKDIR ${HOME}/ros_ws
 
-#Needed to find libcuda.so.1, need to find a way to get ZED SDK working
+#Needed to find libcuda.so.1, need to find a way to get ZED SDK working (aarch64, not tested if still needed)
 RUN echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.2/compat/:$LD_LIBRARY_PATH" > ${HOME}/.bashrc && source ${HOME}/.bashrc
 
 #Install the ZED SDK - Args gathered from Nvidia ISSAC_ROS_COMMON repository
@@ -51,16 +53,19 @@ sudo ln -sf /usr/lib/aarch64-linux-gnu/tegra/libv4l2.so.0 /usr/lib/aarch64-linux
 #https://github.com/stereolabs/zed-ros2-wrapper
 #https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
 #https://github.com/mavlink/mavros
+#https://github.com/Rnfudge02/J-Sub - AUV Controller
 RUN mkdir src src/AUV-Toolkit-ROS2 build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
 git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git && \
 git clone -b ros2 https://github.com/mavlink/mavros && \
+git clone ${JSUB_DIR} && \
 mv ./zed-ros2-wrapper ./src/zed-ros2-wrapper && \
 mv ./nmea_navsat_driver ./src/nmea_navsat_driver && \
 mv ./mavros ./src/mavros && \
+mv ./J-Sub ./src/J-Sub && \
 sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh && \
 sed -i "261,272d" ./src/mavros/mavros/CMakeLists.txt
 
-#Install prerequisites using rosdep and install vscode-server
+#Install prerequisites using rosdep 
 RUN sudo apt-get update && rosdep update && \
 rosdep install --from-paths src --ignore-src -r -y
 

@@ -78,7 +78,7 @@ while getopts "hi:b:s:dnl:p:" options; do
             #Edit network configuration so communication with companion computer is possible
 
             #Instructions specific to x86_64
-            if [ "${OPTARG}" == "x86_64" ]; then
+            if [ "${OPTARG}" == "x86_64" || "${OPTARG}" == "x86_64_WSL" ]; then
                 echo -e "${FG_CYAN}Target Selected: x86_64${RESET}" | tee -a ${INIT_LOG}
 
                 echo -e "${FG_CYAN}Removing old versions of Nvidia CUDA Toolkit${RESET}" | tee -a ${INIT_LOG}
@@ -89,11 +89,19 @@ while getopts "hi:b:s:dnl:p:" options; do
                 #Install the Nvidia CUDA Toolkit and Drivers
                 #https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_network
                 echo -e "${FG_CYAN}Installing Nvidia CUDA Toolkit and drivers${RESET}" | tee -a ${INIT_LOG}
-                wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb | tee -a ${INIT_LOG}
-                sudo dpkg -i cuda-keyring_1.1-1_all.deb | tee -a ${INIT_LOG}
-                sudo apt-get update | tee -a ${INIT_LOG}
-                sudo apt-get install -y nvidia-driver-555-open cuda-drivers-555 | tee -a ${INIT_LOG}
-                sudo apt-get install -y cuda-toolkit-12-5 cuda-compat-12-5 | tee -a ${INIT_LOG}
+                if [ "${OPTARG}" == "x86_64" ]; then
+                    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb | tee -a ${INIT_LOG}
+                    sudo dpkg -i cuda-keyring_1.1-1_all.deb | tee -a ${INIT_LOG}
+                    sudo apt-get update | tee -a ${INIT_LOG}
+                    sudo apt-get install -y nvidia-driver-555-open cuda-drivers-555 | tee -a ${INIT_LOG}
+                    sudo apt-get install -y cuda-toolkit-12-5 cuda-compat-12-5 | tee -a ${INIT_LOG}
+                else
+                    echo -e "${FG_MAGENTA}Target Selected: x86_64_WSL is not officially supported${RESET}" | tee -a ${INIT_LOG}
+                    wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.1-1_all.deb
+                    sudo dpkg -i cuda-keyring_1.1-1_all.deb
+                    sudo apt-get update
+                    sudo apt-get -y install cuda-toolkit-12-5
+                fi
 
                 #Modify .bashrc
                 echo 'export PATH=/usr/local/cuda/bin:$PATH' >> ~/.bashrc 
@@ -102,52 +110,6 @@ while getopts "hi:b:s:dnl:p:" options; do
                 rm -f ./cuda-keyring_1.1-1_all.deb
 
                 echo -e "${FG_GREEN}Finished installing Nvidia CUDA Toolkit and drivers${RESET}" | tee -a ${INIT_LOG}
-
-                #Install the ZED SDK (Not sure how good this works as can't reboot mid-script)
-                #https://www.stereolabs.com/developers/release#82af3640d775
-                echo -e "${FG_CYAN}Installing ZED SDK${RESET}"
-                wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu22  | tee -a ${INIT_LOG}
-                chmod +x ./ubuntu22  | tee -a ${INIT_LOG}
-                ./ubuntu22 -- silent  | tee -a ${INIT_LOG}
-
-                rm -f ./ubuntu22
-
-                echo -e "${FG_GREEN}ZED SDK Installed${RESET}" | tee -a ${INIT_LOG}
-
-                #Install Docker Engine
-                #https://docs.docker.com/engine/install/ubuntu/
-                echo -e "${FG_CYAN}Installing Docker Engine${RESET}" | tee -a ${INIT_LOG}
-                sudo install -m 0755 -d /etc/apt/keyrings
-                sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-                sudo chmod a+r /etc/apt/keyrings/docker.asc
-                echo \
-                    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-                    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-                    sudo tee -a /etc/apt/sources.list.d/docker.list > /dev/null
-                sudo apt-get update  | tee -a ${BUILD_LOG}
-                sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin | tee -a ${BUILD_LOG}
-
-                echo -e "${FG_CYAN}Docker Engine Installed${RESET}" | tee -a ${INIT_LOG}
-
-                #Install Foxglove Studio
-                #https://foxglove.dev/download
-                echo -e "${FG_CYAN}Installing Foxglove Studio Visualizer${RESET}" | tee -a ${INIT_LOG}
-                sudo snap install foxglove-studio  | tee -a ${BUILD_LOG}
-                echo -e "${FG_CYAN}Foxglove Studio Installed${RESET}" | tee -a ${INIT_LOG}
-
-            elif [ "${OPTARG}" == "x86_64_WSL" ]; then
-                wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.1-1_all.deb
-                sudo dpkg -i cuda-keyring_1.1-1_all.deb
-                sudo apt-get update
-                sudo apt-get -y install cuda-toolkit-12-5
-
-                #Modify .bashrc
-                echo 'export PATH=/usr/local/cuda/bin:$PATH' >> ~/.bashrc 
-                echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
-
-                rm -f ./cuda-keyring_1.1-1_all.deb
-
-                echo -e "${FG_GREEN}Finished installing Nvidia Cuda Toolkit and drivers${RESET}" | tee -a ${INIT_LOG}
 
                 #Install the ZED SDK (Not sure how good this works as can't reboot mid-script)
                 #https://www.stereolabs.com/developers/release#82af3640d775
@@ -230,6 +192,13 @@ while getopts "hi:b:s:dnl:p:" options; do
                 git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
                 git clone -b ros2 https://github.com/mavlink/mavros
 
+                #Copy J-Sub to source for development
+                git clone https://github.com/Rnfudge02/J-Sub
+
+                mkdir -p ../source
+
+                cp -r ./J-Sub ../source/AUV-Toolkit-ROS2
+
                 mkdir -p ./configuration_files/zed/
 
                 cp ./zed-ros2-wrapper/zed_wrapper/config/common.yaml ./configuration_files/zed/common.yaml
@@ -252,6 +221,13 @@ while getopts "hi:b:s:dnl:p:" options; do
             git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git
             git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
             git clone -b ros2 https://github.com/mavlink/mavros
+
+            ##Copy J-Sub to source folder for development
+            git clone https://github.com/Rnfudge02/J-Sub
+
+            mkdir -p ../source
+
+            cp ./J-Sub ../source/AUV-Toolkit-ROS2
 
             mkdir -p ./configuration_files/zed/
             mkdir -p ./configuration_files/ardusub/
@@ -306,6 +282,8 @@ while getopts "hi:b:s:dnl:p:" options; do
 
         #Handles building the container for the target system
         b)
+            PAT=$(cat .tokens/PAT)
+
             touch .status/buildRunning
             echo -e "${FG_CYAN}Building container for AUV${RESET}" | tee -a ${BUILD_LOG}
 
@@ -321,6 +299,7 @@ while getopts "hi:b:s:dnl:p:" options; do
 
             cd scripts
             rm -f auv-entrypoint.sh
+            rm -f c_cpp_properties.json
             ln ../../../../configuration/auv-entrypoint.sh auv-entrypoint.sh
             ln ../../../../.vscode/c_cpp_properties.json c_cpp_properties.json
             cd ../../../../
@@ -330,11 +309,11 @@ while getopts "hi:b:s:dnl:p:" options; do
 
             if [ "${OPTARG}" == "x86_64" ]; then
                 echo -e "${FG_CYAN}Target Selected: x86_64${RESET}" | tee -a ${BUILD_LOG}
-                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key x86_64.ros2_humble.user.auv-x86_64 --build_arg USERNAME=auv-container --image_name auv-container:x86_64 | tee -a ${BUILD_LOG}
+                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key x86_64.ros2_humble.user.auv-x86_64 --build_arg USERNAME=auv-container --build_arg ACCESS_TOKEN=${PAT} --image_name auv-container:x86_64 | tee -a ${BUILD_LOG}
 
             elif [ "${OPTARG}" == "aarch64" ]; then
                 echo -e "${FG_CYAN}Target Selected: aarch64${RESET}" | tee -a ${BUILD_LOG}
-                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key aarch64.ros2_humble.user.auv-aarch64 --build_arg USERNAME=auv-container --image_name auv-container:aarch64 | tee -a ${BUILD_LOG}
+                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key aarch64.ros2_humble.user.auv-aarch64 --build_arg USERNAME=auv-container --build_arg ACCESS_TOKEN=${PAT} --image_name auv-container:aarch64 | tee -a ${BUILD_LOG}
 
             else
                 echo -e "${FG_RED}Error (FATAL): Invalid target selected${RESET}" | tee -a ${BUILD_LOG}

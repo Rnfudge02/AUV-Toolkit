@@ -1,4 +1,4 @@
-#AUV Toolkit AARCH64 Dockerfile - Program developed by Robert Fudge, 2024
+#AUV Toolkit x86_64 Dockerfile - Developed by Robert Fudge, 2024
 
 #Build Issac ROS Image for x86_64
 #https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
@@ -7,11 +7,14 @@ FROM ${BASE_IMAGE}
 
 #Maintainer label
 LABEL maintainer "Robert Fudge <rnfudge@mun.ca>"
+ARG ACCESS_TOKEN
 
+#Set suer and home environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV USER=auv-container
 ENV HOME=/home/${USER}
 ENV ISSAC_ROS_WS=${HOME}/ros_ws
+ENV JSUB_DIR=https://${ACCESS_TOKEN}@github.com/Rnfudge02/J-Sub
 
 #Install prerequisite packages
 RUN apt-get update && apt-get install -y keyboard-configuration && \
@@ -37,19 +40,22 @@ mkdir -p ${HOME}/ros_ws && touch ${HOME}/.bashrc
 #set ROS workspace as WORKDIR
 WORKDIR ${HOME}/ros_ws
 
-#Install the ZED SDK - Args gathered from Nvidia ISSAC_ROS_COMMON repository
+#Install the ZED SDK
 RUN wget -q --no-check-certificate -O ZED_SDK_Linux.run https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu22 && \
 chmod +x ZED_SDK_Linux.run && ./ZED_SDK_Linux.run -- silent 
 
 #https://github.com/stereolabs/zed-ros2-wrapper
 #https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
 #https://github.com/mavlink/mavros
-RUN mkdir src build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
+#https://github.com/Rnfudge02/J-Sub - AUV Controller
+RUN mkdir src src/AUV-Toolkit-ROS2 build install && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git && \
 git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git && \
 git clone -b ros2 https://github.com/mavlink/mavros && \
+git clone ${JSUB_DIR} && \
 mv ./zed-ros2-wrapper ./src/zed-ros2-wrapper && \
 mv ./nmea_navsat_driver ./src/nmea_navsat_driver && \
 mv ./mavros ./src/mavros && \
+mv ./J-Sub ./src/J-Sub && \
 sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh && \
 sed -i "261,272d" ./src/mavros/mavros/CMakeLists.txt
 
@@ -57,7 +63,9 @@ sed -i "261,272d" ./src/mavros/mavros/CMakeLists.txt
 RUN sudo apt-get update && rosdep update && \
 rosdep install --from-paths src --ignore-src -r -y
 
+#Copy entrypoint and vscode config
 COPY scripts/auv-entrypoint.sh /entrypoint.sh
+COPY scripts/c_cpp_properties.json ../.vscode/c_cpp_properties.json
 RUN sudo chmod +x /entrypoint.sh
 
 ENTRYPOINT [ "/entrypoint.sh" ]

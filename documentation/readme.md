@@ -21,10 +21,17 @@ LibMavConn
 
 MAVROS ROS2 Driver
 
+Foxglove Bridge
+
+# Contents
+## AUV Container Controller (ACC.sh)
+## x86_64 AUV Container, Nvidia GPU required
+## aarch64 AUV Container, Nvidia Jetson Orin
+
 # To Start
 
 ## 1. Run ./ACC.sh -i [arch]
-Note: In order to run -i. -b, or -s, you must specify which architecture the code is being built on
+Note: In order to run -i. -b, or -s, you must specify which architecture the code is being built on (x86_64, aarch64, no_arch, etc.)
 
 ## 2. Run ./ACC.sh -b [arch]
 This will create a docker container using the specified architetcure, while grabbing all dependencies and prerequisite software
@@ -51,19 +58,28 @@ ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i
 ### NMEA Navsat Driver - https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
 ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
 
-## 6. Launch Nvidia ROS Visual SLAM
+## 6. Launch Nvidia ROS Visual SLAM - Ease of use X (no camera support)
 ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam.launch.py num_cameras:=2 enable_localization_n_mapping:=true enable_imu_fusion:=true base_frame:=sub_centre imu_frame:=imu enable_slam_visualization:=true enable_observations_view:=true enable_landmarks_view:=true
 
 # Changelog
 The following versions have been deemed stable enough to consider signifigant milestones, and starting June 17th, 2024
 
+## V7.0 - August 24th, 2024
+Added AUV ROS2 controller project into appropriate dockerfiles
+
 ## V6.0 - August 18th, 2024
 Started looking into controlling boards power capabilities
+
 /sys/devices/platform/17000000.gpu/devfreq/17000000.gpu - For GPU control
+
 /sys/devices/system/cpu/cpu0/cpufreq - For CPU control
 
+Starting work on ROS2 Controller module
+
 ## V5.0 - July XXth, 2024
-Created and deployed temporary fixes
+Created and deployed temporary fixes for ISSAC ROS V3.0.1, made signifigant headway connecting FCU to computer (via companion computer)
+
+Working on debugging Ardusub ROS2 Driver - Seems to be dead end
 
 ## V4.0 - June 17th, 2024
 Initial commit to github

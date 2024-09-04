@@ -1,3 +1,5 @@
 .status
 ./dependencies/configuration_files/
 .share
+./source
+.tokens
