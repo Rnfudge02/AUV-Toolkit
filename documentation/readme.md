@@ -24,17 +24,73 @@ MAVROS ROS2 Driver
 Foxglove Bridge
 
 # Contents
-## AUV Container Controller (ACC.sh)
-## x86_64 AUV Container, Nvidia GPU required
-## aarch64 AUV Container, Nvidia Jetson Orin
+AUV Container Controller (ACC.sh)
+
+x86_64 AUV Container, Nvidia GPU required
+
+aarch64 AUV Container, Nvidia Jetson Orin NX 8GB minimum
+
+# To setup
+
+## x86_64 (Development Toolchain)
+### 1. Install Ubuntu 22.04 (Dual-Boot is fine)
+The system must have an Nvidia CUDA-capable GPU
+
+### 2. Install Nvidia CUDA Toolkit
+https://developer.nvidia.com/cuda-downloads
+
+### 3. Install Docker Engine for Linux
+https://docs.docker.com/engine/install/ubuntu/
+
+### 4. Follow Post-install Steps for Linux (Docker Engine)
+https://docs.docker.com/engine/install/linux-postinstall/
+
+### 5. Install Nvidia Container Toolkit
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+### 6. Link Nvidia Container Toolkit to Docker Engine
+On above webpage
+
+### 7. Install the ZED SDK
+https://www.stereolabs.com/en-ca/developers/release#82af3640d775
+
+Suggest running AI optimization while installing (will take a while)
+
+### 8 (1 if production environment). Install Nvidia SDK Manager
+https://developer.nvidia.com/sdk-manager
+
+You will need to create an Nvidia Developer Account
+
+## 9. Run "./ACC.sh -b x86_64" to build the container
+Note, you must have a Personal Access Token (PAT) to build the project, located in the .tokens directory.
+
+## aarch64
+### 1 (On x86_64). Flash the Target Device
+During this step you should aim to install all dependency libraries and Software development kits
+
+### 2 (On aarch64). Ensure Python3, Python3-pip, and Zstd are Installed
+Will be needed for next steps
+
+### 3. Run pip3 install onnx
+Otherwise the ZED SDK will encounter errors
+
+### 4. Install the ZED SDK
+https://www.stereolabs.com/en-ca/developers/release#82af3640d775
+
+Suggest running AI optimization while installing (will take a long time)
+
+## 5. Ensure all devices are connected to the Jetson
+
+## 6. Configure Network Connections (TODO)
+
+## 6. Run the ZED Camera to ensure default calibration file exists
+
+## 7. Run "./ACC.sh -b aarch64" to build the container
+Note, you must have a Personal Access Token (PAT) to build the project, located in the .tokens directory.
+
+
 
 # To Start
-
-## 1. Run ./ACC.sh -i [arch]
-Note: In order to run -i. -b, or -s, you must specify which architecture the code is being built on (x86_64, aarch64, no_arch, etc.)
-
-## 2. Run ./ACC.sh -b [arch]
-This will create a docker container using the specified architetcure, while grabbing all dependencies and prerequisite software
 
 ## 3. Run ./ACC.sh -s [arch]
 This starts the container and will generate a terminal instance for the user to interact with the system. Note that additional terminal insatances may be started after this point by using the -n flag.
@@ -58,11 +114,8 @@ ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i
 ### NMEA Navsat Driver - https://github.com/ros-drivers/nmea_navsat_driver/tree/ros2
 ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
 
-## 6. Launch Nvidia ROS Visual SLAM - Ease of use X (no camera support)
-ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam.launch.py num_cameras:=2 enable_localization_n_mapping:=true enable_imu_fusion:=true base_frame:=sub_centre imu_frame:=imu enable_slam_visualization:=true enable_observations_view:=true enable_landmarks_view:=true
-
 # Changelog
-The following versions have been deemed stable enough to consider signifigant milestones, and starting June 17th, 2024
+The following versions have been deemed stable enough to consider signifigant milestones, and starting June 17th, 2024 will be uploaded to github
 
 ## V7.0 - August 24th, 2024
 Added AUV ROS2 controller project into appropriate dockerfiles
