@@ -62,7 +62,6 @@ https://developer.nvidia.com/sdk-manager
 You will need to create an Nvidia Developer Account
 
 ## 9. Run "./ACC.sh -b x86_64" to build the container
-Note, you must have a Personal Access Token (PAT) to build the project, located in the .tokens directory.
 
 ## aarch64
 ### 1 (On x86_64). Flash the Target Device
