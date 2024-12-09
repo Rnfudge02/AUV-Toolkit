@@ -158,19 +158,3 @@ Added .status folder to track container controller status
 
 ## V1.0 - May Xth, 2024
 Initial stable build, utilizing ROS2 Humble, ZED ROS2 Wrapper, and NMEA Navsat Driver
-
-
-# TODO
-Design ROS2 system to act as system moderator, make decisions, provide high level control of systems in a unified interface - Created shared volume for mounting
-
-NOT NEEDED Get ARDUSUB Driver working and configured
-
-Get gaskets for end cap
-
-Source waterproof, pressure resistant silcone
-
-# DONE
-Integrate T200 Thrusters, ESC, and PiwHawk 1
-Get approval on purchase request, pick up items from Carl Thibault, P. Eng
-Fix broken MAVROS package, discovered error in packages, use sed to modify CMakeLists.txt and remove the tests from the build
-Meet with Client again, temper expectations - Reached out but he hasn't responded
