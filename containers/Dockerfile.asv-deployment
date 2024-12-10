@@ -1,0 +1,56 @@
+#AUV Toolkit AARCH64 Dockerfile - Developed by Robert Fudge, 2024
+
+#Build Issac ROS Image for aarch64
+#https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+#Maintainer label
+LABEL maintainer "Robert Fudge <rnfudge@mun.ca>"
+ARG ACCESS_TOKEN
+
+#Set user and home environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USER=asv-deployment
+ENV HOME=/home/${USER}
+ENV ISSAC_ROS_WS=${HOME}/ros_ws
+
+#Install prerequisite packages
+RUN apt-get update && apt-get install -y keyboard-configuration  && \
+apt-get install -y ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras python3-sphinx && rm -rf /var/lib/apt/lists/*
+
+#Set user for container
+USER ${USER}
+
+#Ensure needed packages are installed
+RUN sudo apt update && sudo apt install -y python3-rosdep python3-rosinstall-generator python3-vcstool \
+    python3-rosinstall build-essential ros-${ROS_DISTRO}-foxglove-bridge python3-sphinx \
+    ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-camera-calibration \
+    ros-${ROS_DISTRO}-usb-cam && if [[ $(uname -m) == "aarch64" ]] ; then \
+    sudo apt install -y nvidia-cuda-dev; fi
+
+#Upgrade pip and install python libraries
+RUN python3 -m pip install --upgrade pip && pip3 install onnx pyserial transforms3d
+
+#Add to dialout and video group so that container can access devices
+RUN sudo usermod -aG dialout ${USER} && sudo usermod -aG video ${USER} && \
+mkdir -p ${HOME}/ros_ws/src && touch ${HOME}/.bashrc && \
+source /opt/ros/${ROS_DISTRO}/setup.bash 
+
+#set ROS workspace as WORKDIR
+WORKDIR ${HOME}/ros_ws
+
+RUN git clone https://github.com/mgonzs13/yolov8_ros.git && \
+mv yolov8_ros src/yolov8_ros && pip3 install -r src/yolov8_ros/requirements.txt && \
+git clone https://github.com/IcebergASV/general.git && mv general src && \
+git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-master && \
+mv realsense-ros src/realsense-ros && \
+sudo apt update && pip3 install -U sphinx && rosdep update && rosdep install -i --from-path src --rosdistro ${ROS_DISTRO} --skip-keys=librealsense2 -y && \
+source /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install
+
+#Copy entrypoint and vscode config
+COPY scripts/asv-entrypoint.sh /entrypoint.sh
+COPY scripts/c_cpp_properties.json ../.vscode/c_cpp_properties.json
+RUN sudo chmod +x /entrypoint.sh
+
+ENTRYPOINT [ "/entrypoint.sh" ]

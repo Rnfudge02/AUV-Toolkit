@@ -32,6 +32,8 @@ BG_BLUE="\033[44m"
 BG_MAGENTA="\033[45m"
 BG_CYAN="\033[46m"
 BG_WHITE="\033[47m"
+ 
+ARCH=$(uname -m)
 
 #Display program intro
 echo -e "${BOLD}${FG_BLUE}AUV Container Controller (Desktop) REV 3.1, Program developed by Rob Fudge${RESET}"
@@ -173,15 +175,8 @@ while getopts "hi:b:s:dn" options; do
 
                 git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
                 git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git
-                git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
-                git clone -b ros2 https://github.com/mavlink/mavros
-
-                #Copy J-Sub to source for development
-                git clone https://github.com/Rnfudge02/J-Sub
 
                 mkdir -p ../source
-
-                cp -r ./J-Sub ../source/AUV-Toolkit-ROS2
 
                 mkdir -p ./configuration_files/zed/
 
@@ -204,15 +199,8 @@ while getopts "hi:b:s:dn" options; do
 
             git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
             git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git
-            git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
-            git clone -b ros2 https://github.com/mavlink/mavros
-
-            ##Copy J-Sub to source folder for development
-            git clone https://github.com/Rnfudge02/J-Sub
 
             mkdir -p ../source
-
-            cp ./J-Sub ../source/AUV-Toolkit-ROS2
 
             mkdir -p ./configuration_files/zed/
             mkdir -p ./configuration_files/ardusub/
@@ -281,25 +269,29 @@ while getopts "hi:b:s:dn" options; do
             cd ./dependencies/isaac_ros_common/docker/
             rm -f Dockerfile.auv-x86_64
             rm -f Dockerfile.auv-aarch64
+            rm -f Dockerfile.asv-deployment
             ln ../../../containers/Dockerfile.auv-x86_64 Dockerfile.auv-x86_64
             ln ../../../containers/Dockerfile.auv-aarch64 Dockerfile.auv-aarch64
+            ln ../../../containers/Dockerfile.asv-deployment Dockerfile.asv-deployment
 
             cd scripts
             rm -f auv-entrypoint.sh
+            rm -f asv-entrypoint.sh
             rm -f c_cpp_properties.json
             ln ../../../../configuration/auv-entrypoint.sh auv-entrypoint.sh
+            ln ../../../../configuration/asv-entrypoint.sh asv-entrypoint.sh
             ln ../../../../.vscode/c_cpp_properties.json c_cpp_properties.json
             cd ../../../../
 
             #Ensure user has access to the script
             chmod +x ./dependencies/isaac_ros_common/scripts/build_image_layers.sh
 
-            if [[ "${OPTARG}" == "x86_64" ]]; then
-                echo -e "${FG_CYAN}Target Selected: x86_64${RESET}"
-                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key x86_64.ros2_humble.user.auv-x86_64 --build_arg USERNAME=auv-container --build_arg ACCESS_TOKEN=${PAT} --image_name auv-container:x86_64
+            if [[ "${OPTARG}" == "asv" ]]; then
+                echo -e "${FG_CYAN}Target Selected: asv${RESET}"
+                ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key ${ARCH}.ros2_humble.realsense.user.asv-deployment --build_arg USERNAME=asv-deployment --image_name asv-deployment:${ARCH}
 
-            elif [[ "${OPTARG}" == "aarch64" ]]; then
-                echo -e "${FG_CYAN}Target Selected: aarch64${RESET}"
+            elif [[ "${OPTARG}" == "auv" ]]; then
+                echo -e "${FG_CYAN}Target Selected: auv${RESET}"
                 ./dependencies/isaac_ros_common/scripts/build_image_layers.sh --image_key aarch64.ros2_humble.user.auv-aarch64 --build_arg USERNAME=auv-container --build_arg ACCESS_TOKEN=${PAT} --image_name auv-container:aarch64
 
             else
@@ -352,20 +344,19 @@ while getopts "hi:b:s:dn" options; do
             mkdir -p share/source_vol
             mkdir -p share/data_vol
 
-            docker volume create --driver local --opt type="none" --opt device="${PWD}/share/source_vol/AUV-Toolkit-ROS2" --opt o="bind" "auv_source_vol" > /dev/null
+            docker volume create --driver local --opt type="none" --opt device="${PWD}/share/source_vol" --opt o="bind" "auv_source_vol" > /dev/null
             docker volume create --driver local --opt type="none" --opt device="${PWD}/share/data_vol" --opt o="bind" "auv_data_vol" > /dev/null
 
             #Need to disable authentication for access to windowing system
             xhost +
 
             #Run the build script for the specified architecture
-            if [[ "${OPTARG}" == "x86_64" ]];then
-                echo -e "${FG_CYAN}Target Selected: x86_64${RESET}"
-                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it -e NVIDIA_DRIVER_CAPABILITIES=all --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw"  --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src/auv-toolkit-ros2:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:x86_64" ${GNSS_DIR}
-
+            if [[ "${OPTARG}" == "asv" ]];then
+                echo -e "${FG_CYAN}Target Selected: asv${RESET}"
+                docker run --entrypoint /usr/local/bin/scripts/asv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw" --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "asv-deployment:${ARCH}" ${GNSS_DIR}
             elif [[ "${OPTARG}" == "aarch64" ]]; then
                 echo -e "${FG_CYAN}Target Selected: aarch64${RESET}"
-                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw" --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src/auv-toolkit-ros2:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:aarch64" ${GNSS_DIR}
+                docker run --entrypoint /usr/local/bin/scripts/auv-entrypoint.sh --privileged --runtime=nvidia --network=host --rm -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="/usr/local/zed/settings:/usr/local/zed/settings:rw" --volume="/usr/local/zed/resources:/usr/local/zed/resources:rw" --volume="${PWD}/dependencies/configuration_files/zed:/home/auv-container/ros_ws/src/zed-ros2-wrapper/zed_wrapper/config:rw" --volume="auv_source_vol:/home/auv-container/ros_ws/src:rw" --volume="auv_data_vol:/home/auv-container/ros_ws/data:rw" "auv-container:${ARCH}" ${GNSS_DIR}
 
             else
                 echo -e "${FG_RED}Error (FATAL): Invalid target selected${RESET}"

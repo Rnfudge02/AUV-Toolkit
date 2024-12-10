@@ -14,7 +14,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV USER=auv-container
 ENV HOME=/home/${USER}
 ENV ISSAC_ROS_WS=${HOME}/ros_ws
-ENV JSUB_DIR=https://${ACCESS_TOKEN}@github.com/Rnfudge02/J-Sub
 
 #Install prerequisite packages
 RUN apt-get update && apt-get install -y keyboard-configuration && \
